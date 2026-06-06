@@ -1,6 +1,5 @@
 import { createHash } from "crypto";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { Stream } from "openai/streaming";
 import type OpenAI from "openai";
 
 export const COMPLETION_TOKEN_LIMIT = 2048;
@@ -75,7 +74,7 @@ type ChatCompletionChunk = OpenAI.Chat.Completions.ChatCompletionChunk;
  * any inline `<think>` tags that appear in `content`.
  */
 export function createAnswerOnlyStream(
-  stream: Stream<ChatCompletionChunk>,
+  stream: AsyncIterable<ChatCompletionChunk>,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
