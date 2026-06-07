@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.TOGETHER_API_KEY;
     if (!apiKey) {
-      return ndjsonErrorResponse("TOGETHER_API_KEY is not configured", 500);
+      return ndjsonErrorResponse("TOGETHER_API_KEY is not configured", 503);
     }
 
     const body = await req.json();

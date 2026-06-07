@@ -59,12 +59,15 @@ function parseNdjsonLine(line: string): NdjsonLine | null {
   }
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 export async function parseNdjsonStream(
   body: ReadableStream<Uint8Array>,
   runStart: number,
   onUpdate: (update: Partial<ProviderPanelState>) => void,
-  providerLabel?: string,
-): Promise<"done" | "error" | "incomplete"> {
+): Promise<"done" | "error" | "incomplete" | "aborted"> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -85,16 +88,6 @@ export async function parseNdjsonStream(
     const totalMs = performance.now() - runStart;
     const completionTokens = metrics.metrics.completionTokens ?? null;
     const ttftMs = clientTtftMs;
-
-    if (
-      process.env.NODE_ENV === "development" &&
-      metrics.metrics.serverTtftMs != null &&
-      providerLabel
-    ) {
-      console.log(
-        `[${providerLabel}] server TTFT: ${metrics.metrics.serverTtftMs.toFixed(1)} ms`,
-      );
-    }
 
     onUpdate({
       output,
@@ -154,6 +147,12 @@ export async function parseNdjsonStream(
       isStreaming: false,
     });
     return "incomplete";
+  } catch (error) {
+    if (isAbortError(error)) {
+      onUpdate({ isStreaming: false });
+      return "aborted";
+    }
+    throw error;
   } finally {
     reader.releaseLock();
   }

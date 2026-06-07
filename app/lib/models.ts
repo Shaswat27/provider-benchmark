@@ -1,5 +1,3 @@
-export type Provider = "fireworks" | "together";
-
 export type BenchmarkModel = {
   id: string;
   label: string;
@@ -55,11 +53,4 @@ export const BENCHMARK_MODELS: BenchmarkModel[] = [
 
 export function getModelById(id: string): BenchmarkModel | undefined {
   return BENCHMARK_MODELS.find((model) => model.id === id);
-}
-
-export function getProviderModel(
-  model: BenchmarkModel,
-  provider: Provider,
-): string {
-  return provider === "fireworks" ? model.fireworksModel : model.togetherModel;
 }

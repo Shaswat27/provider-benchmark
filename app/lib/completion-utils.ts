@@ -55,18 +55,6 @@ export function buildChatOptions(
   };
 }
 
-/** Strip inline `<think>` blocks from a complete string. */
-export function stripInlineThinkingFromString(text: string): string {
-  let cleaned = text;
-  const thinkEnd = cleaned.lastIndexOf("</think>");
-  if (thinkEnd !== -1) {
-    cleaned = cleaned.slice(thinkEnd + "</think>".length).trimStart();
-  }
-  return cleaned
-    .replace(/<think>[\s\S]*?<\/redacted_thinking>/g, "")
-    .trimStart();
-}
-
 type ChatCompletionChunk = OpenAI.Chat.Completions.ChatCompletionChunk;
 
 /**

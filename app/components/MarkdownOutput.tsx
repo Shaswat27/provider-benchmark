@@ -101,14 +101,13 @@ const markdownComponents: Components = {
 
 type MarkdownOutputProps = {
   content: string;
-  className?: string;
 };
 
-export function MarkdownOutput({ content, className = "" }: MarkdownOutputProps) {
+export function MarkdownOutput({ content }: MarkdownOutputProps) {
   if (!content) return null;
 
   return (
-    <div className={`pr-14 text-sm text-zinc-700 dark:text-zinc-300 ${className}`}>
+    <div className="pr-14 text-sm text-zinc-700 dark:text-zinc-300">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {content}
       </ReactMarkdown>

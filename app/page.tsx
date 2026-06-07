@@ -9,7 +9,7 @@ import {
 } from "@/app/lib/parse-ndjson-stream";
 import { BENCHMARK_MODELS, getModelById } from "@/app/lib/models";
 import { runProvider } from "@/app/lib/run-provider";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ProviderPanelProps = {
   providerName: string;
@@ -80,8 +80,15 @@ export default function HomePage() {
   const [together, setTogether] = useState(createEmptyPanelState);
   const [isRunning, setIsRunning] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const selectedModel = getModelById(modelId);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   function autoGrowPromptTextarea() {
     const el = promptTextareaRef.current;
@@ -114,30 +121,40 @@ export default function HomePage() {
     }
     messages.push({ role: "user", content: trimmedPrompt });
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsRunning(true);
     setFireworks(createEmptyPanelState());
     setTogether(createEmptyPanelState());
 
     const runStart = performance.now();
 
-    await Promise.all([
-      runProvider(
-        "/api/fireworks",
-        model.fireworksModel,
-        messages,
-        runStart,
-        (update) => setFireworks((prev) => ({ ...prev, ...update })),
-      ),
-      runProvider(
-        "/api/together",
-        model.togetherModel,
-        messages,
-        runStart,
-        (update) => setTogether((prev) => ({ ...prev, ...update })),
-      ),
-    ]);
-
-    setIsRunning(false);
+    try {
+      await Promise.all([
+        runProvider(
+          "/api/fireworks",
+          model.fireworksModel,
+          messages,
+          runStart,
+          (update) => setFireworks((prev) => ({ ...prev, ...update })),
+          controller.signal,
+        ),
+        runProvider(
+          "/api/together",
+          model.togetherModel,
+          messages,
+          runStart,
+          (update) => setTogether((prev) => ({ ...prev, ...update })),
+          controller.signal,
+        ),
+      ]);
+    } finally {
+      if (!controller.signal.aborted) {
+        setIsRunning(false);
+      }
+    }
   }
 
   return (

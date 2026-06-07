@@ -40,7 +40,7 @@ function formatComparisonLine(
   return `${base} — Together ${delta}% higher`;
 }
 
-export function canShowComparisonSummary(
+function canShowComparisonSummary(
   fireworks: ProviderPanelState,
   together: ProviderPanelState,
 ): boolean {

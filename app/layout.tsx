@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Provider Benchmark",
-  description: "Side-by-side benchmark: Fireworks vs Together AI",
+  description:
+    "Compare open-model latency side by side on Fireworks and Together AI — TTFT, end-to-end time, and tokens/sec from parallel streamed runs.",
 };
 
 export default function RootLayout({
