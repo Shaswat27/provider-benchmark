@@ -1,5 +1,6 @@
 "use client";
 
+import { ComparisonSummary } from "@/app/components/ComparisonSummary";
 import { MarkdownOutput } from "@/app/components/MarkdownOutput";
 import { MetricsBadge } from "@/app/components/MetricsBadge";
 import {
@@ -11,25 +12,50 @@ import { runProvider } from "@/app/lib/run-provider";
 import { useRef, useState } from "react";
 
 type ProviderPanelProps = {
-  title: string;
+  providerName: string;
+  modelSlug: string;
   state: ProviderPanelState;
 };
 
-function ProviderPanel({ title, state }: ProviderPanelProps) {
+async function copyToClipboard(text: string) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Ignore clipboard errors.
+  }
+}
+
+function ProviderPanel({ providerName, modelSlug, state }: ProviderPanelProps) {
   return (
     <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <MetricsBadge
-          ttftMs={state.ttftMs}
-          totalMs={state.totalMs}
-          completionTokens={state.completionTokens}
-          tokensPerSec={state.tokensPerSec}
-          isStreaming={state.isStreaming}
-        />
+      <div className="mb-3 flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold">{providerName}</h2>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              {modelSlug}
+            </p>
+          </div>
+          <MetricsBadge
+            ttftMs={state.ttftMs}
+            totalMs={state.totalMs}
+            completionTokens={state.completionTokens}
+            tokensPerSec={state.tokensPerSec}
+            isStreaming={state.isStreaming}
+          />
+        </div>
       </div>
 
       <div className="relative min-h-[220px] rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <button
+          type="button"
+          onClick={() => void copyToClipboard(state.output)}
+          disabled={!state.output}
+          className="absolute right-3 top-3 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          Copy
+        </button>
         <MarkdownOutput content={state.output} />
         {state.error ? (
           <p className="mt-2 text-xs text-red-600 dark:text-red-400">
@@ -145,7 +171,7 @@ export default function HomePage() {
             ))}
           </select>
           {selectedModel?.notes ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
               {selectedModel.notes}
             </p>
           ) : null}
@@ -188,9 +214,19 @@ export default function HomePage() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ProviderPanel title="Fireworks" state={fireworks} />
-          <ProviderPanel title="Together AI" state={together} />
+          <ProviderPanel
+            providerName="Fireworks"
+            modelSlug={selectedModel?.fireworksModel ?? ""}
+            state={fireworks}
+          />
+          <ProviderPanel
+            providerName="Together AI"
+            modelSlug={selectedModel?.togetherModel ?? ""}
+            state={together}
+          />
         </section>
+
+        <ComparisonSummary fireworks={fireworks} together={together} />
 
         <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
           <button

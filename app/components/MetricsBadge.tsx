@@ -48,6 +48,9 @@ export function MetricsBadge({
           streaming…
         </span>
       ) : null}
+      <p className="mt-1 text-[10px] leading-snug text-zinc-400 dark:text-zinc-500">
+        TTFT = first visible token · tok/s = completion_tokens ÷ (total − TTFT)
+      </p>
     </div>
   );
 }
