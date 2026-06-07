@@ -1,8 +1,7 @@
 "use client";
 
 import { ComparisonSummary } from "@/app/components/ComparisonSummary";
-import { MarkdownOutput } from "@/app/components/MarkdownOutput";
-import { MetricsBadge } from "@/app/components/MetricsBadge";
+import { ProviderPanel } from "@/app/components/ProviderPanel";
 import {
   createEmptyPanelState,
   type ProviderPanelState,
@@ -17,70 +16,11 @@ import { BENCHMARK_MODELS, getModelById } from "@/app/lib/models";
 import { runProvider } from "@/app/lib/run-provider";
 import { useEffect, useRef, useState } from "react";
 
-type ProviderPanelProps = {
-  providerName: string;
-  modelSlug: string;
-  state: ProviderPanelState;
-};
-
-async function copyToClipboard(text: string) {
-  if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    // Ignore clipboard errors.
-  }
-}
-
-function ProviderPanel({ providerName, modelSlug, state }: ProviderPanelProps) {
-  return (
-    <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-3 flex flex-col gap-2">
-        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold">{providerName}</h2>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              {modelSlug}
-            </p>
-          </div>
-          <MetricsBadge
-            ttftMs={state.ttftMs}
-            totalMs={state.totalMs}
-            completionTokens={state.completionTokens}
-            tokensPerSec={state.tokensPerSec}
-            isStreaming={state.isStreaming}
-            multiRunSummary={state.multiRunSummary}
-          />
-        </div>
-      </div>
-
-      <div className="relative min-h-[220px] rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <button
-          type="button"
-          onClick={() => void copyToClipboard(state.output)}
-          disabled={!state.output}
-          className="absolute right-3 top-3 rounded-md border border-zinc-300 bg-white px-2 py-1 text-[11px] text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          Copy
-        </button>
-        <MarkdownOutput content={state.output} />
-        {state.error ? (
-          <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-            {state.error}
-          </p>
-        ) : null}
-        {!state.output && !state.error && !state.isStreaming ? (
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Output will appear here after a benchmark run.
-          </p>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
 const RUNS_PER_BENCHMARK_OPTIONS = [1, 3, 5] as const;
 type RunsPerBenchmark = (typeof RUNS_PER_BENCHMARK_OPTIONS)[number];
+
+const inputClassName =
+  "w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-sm outline-none ring-zinc-300 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500";
 
 function finalizeMultiRunPanel(
   samples: RunSample[],
@@ -260,143 +200,165 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-full bg-zinc-50 px-4 py-6 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 sm:py-8">
-      <div className="mx-auto flex w-full max-w-[900px] flex-col gap-6">
-        <header className="space-y-2">
+    <div className="min-h-full bg-zinc-50 px-3 py-6 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 sm:px-4 sm:py-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <header className="space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+            Fireworks vs Together
+          </p>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Provider Benchmark
           </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             Compare the same open model on Fireworks and Together AI side by side.
             Metrics are measured in your browser from parallel runs.
           </p>
         </header>
 
-        <section className="space-y-2">
-          <label htmlFor="model-select" className="text-sm font-medium">
-            Model
-          </label>
-          <select
-            id="model-select"
-            value={modelId}
-            onChange={(e) => setModelId(e.target.value)}
-            disabled={isRunning}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-sm outline-none ring-zinc-300 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
-          >
-            {BENCHMARK_MODELS.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-          {selectedModel?.notes ? (
-            <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              {selectedModel.notes}
-            </p>
-          ) : null}
-        </section>
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="model-select" className="text-sm font-medium">
+                Model
+              </label>
+              <select
+                id="model-select"
+                value={modelId}
+                onChange={(e) => setModelId(e.target.value)}
+                disabled={isRunning}
+                className={inputClassName}
+              >
+                {BENCHMARK_MODELS.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+              {selectedModel?.notes ? (
+                <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  {selectedModel.notes}
+                </p>
+              ) : null}
+            </div>
 
-        <section className="space-y-2">
-          <label htmlFor="runs-select" className="text-sm font-medium">
-            Runs per benchmark
-          </label>
-          <select
-            id="runs-select"
-            value={runsPerBenchmark}
-            onChange={(e) =>
-              setRunsPerBenchmark(Number(e.target.value) as RunsPerBenchmark)
-            }
-            disabled={isRunning}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-sm outline-none ring-zinc-300 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
-          >
-            {RUNS_PER_BENCHMARK_OPTIONS.map((runs) => (
-              <option key={runs} value={runs}>
-                {runs} {runs === 1 ? "(default)" : ""}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-            {runsPerBenchmark === 1
-              ? "Single parallel pair — same as before."
-              : `${runsPerBenchmark} sequential parallel pairs. Medians exclude failed runs; min–max shown when 2+ runs succeed.`}
-          </p>
-        </section>
-
-        <section className="space-y-3">
-          <div className="space-y-2">
-            <label htmlFor="user-prompt" className="text-sm font-medium">
-              Your prompt
-            </label>
-            <textarea
-              id="user-prompt"
-              ref={promptTextareaRef}
-              value={userPrompt}
-              onChange={(e) => {
-                setUserPrompt(e.target.value);
-                autoGrowPromptTextarea();
-              }}
-              placeholder="Enter a prompt to benchmark on both providers..."
-              rows={5}
-              disabled={isRunning}
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none ring-zinc-300 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
-            />
+            <div className="space-y-2">
+              <label htmlFor="runs-select" className="text-sm font-medium">
+                Runs per benchmark
+              </label>
+              <select
+                id="runs-select"
+                value={runsPerBenchmark}
+                onChange={(e) =>
+                  setRunsPerBenchmark(Number(e.target.value) as RunsPerBenchmark)
+                }
+                disabled={isRunning}
+                className={inputClassName}
+              >
+                {RUNS_PER_BENCHMARK_OPTIONS.map((runs) => (
+                  <option key={runs} value={runs}>
+                    {runs} {runs === 1 ? "(default)" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                {runsPerBenchmark === 1
+                  ? "Single parallel pair — same as before."
+                  : `${runsPerBenchmark} sequential parallel pairs. Medians exclude failed runs; min–max shown when 2+ runs succeed.`}
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="system-prompt" className="text-xs font-medium">
-              System prompt (optional)
-            </label>
-            <textarea
-              id="system-prompt"
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="Optional system instructions shared by both runs..."
-              rows={3}
+          <div className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="user-prompt" className="text-sm font-medium">
+                Your prompt
+              </label>
+              <textarea
+                id="user-prompt"
+                ref={promptTextareaRef}
+                value={userPrompt}
+                onChange={(e) => {
+                  setUserPrompt(e.target.value);
+                  autoGrowPromptTextarea();
+                }}
+                placeholder="Enter a prompt to benchmark on both providers..."
+                rows={5}
+                disabled={isRunning}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none ring-zinc-300 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="system-prompt"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
+              >
+                System prompt (optional)
+              </label>
+              <textarea
+                id="system-prompt"
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder="Optional system instructions shared by both runs..."
+                rows={3}
+                disabled={isRunning}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none ring-zinc-300 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col items-stretch gap-2 border-t border-zinc-100 pt-5 sm:flex-row sm:items-center dark:border-zinc-800">
+            <button
+              type="button"
+              disabled={!userPrompt.trim() || isRunning}
+              onClick={() => void runBenchmark()}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            >
+              {isRunning ? (
+                <>
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+                  {runProgress
+                    ? `Running… (${runProgress.current}/${runProgress.total})`
+                    : "Running…"}
+                </>
+              ) : (
+                "Run benchmark"
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={resetBenchmark}
               disabled={isRunning}
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none ring-zinc-300 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
-            />
+              className="rounded-xl border border-zinc-300 bg-white px-6 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Reset
+            </button>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ProviderPanel
-            providerName="Fireworks"
-            modelSlug={selectedModel?.fireworksModel ?? ""}
-            state={fireworks}
-          />
-          <ProviderPanel
-            providerName="Together AI"
-            modelSlug={selectedModel?.togetherModel ?? ""}
-            state={together}
-          />
+        <section className="space-y-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Results
+          </h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ProviderPanel
+              providerName="Fireworks"
+              modelSlug={selectedModel?.fireworksModel ?? ""}
+              state={fireworks}
+              accentClassName="border-t-2 border-t-amber-400 dark:border-t-amber-600/70"
+            />
+            <ProviderPanel
+              providerName="Together AI"
+              modelSlug={selectedModel?.togetherModel ?? ""}
+              state={together}
+              accentClassName="border-t-2 border-t-blue-500 dark:border-t-blue-500/70"
+            />
+          </div>
         </section>
 
         <ComparisonSummary fireworks={fireworks} together={together} />
 
-        <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
-          <button
-            type="button"
-            disabled={!userPrompt.trim() || isRunning}
-            onClick={() => void runBenchmark()}
-            className="rounded-xl bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-          >
-            {isRunning
-              ? runProgress
-                ? `Running… (${runProgress.current}/${runProgress.total})`
-                : "Running…"
-              : "Run benchmark"}
-          </button>
-          <button
-            type="button"
-            onClick={resetBenchmark}
-            disabled={isRunning}
-            className="rounded-xl border border-zinc-300 bg-white px-6 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          >
-            Reset
-          </button>
-        </div>
-
-        <footer className="rounded-2xl border border-zinc-200 bg-white p-4 text-xs leading-relaxed text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+        <footer className="border-t border-zinc-200 pt-5 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
           <p>
             Both providers are called in parallel from your browser. TTFT, total
             time, and throughput are client-measured and may vary with caching,

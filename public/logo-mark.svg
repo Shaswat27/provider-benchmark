@@ -1,0 +1,14 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Provider Benchmark logo mark</title>
+  <desc id="desc">Two opposing benchmark panels forming a lightning bolt and bar chart.</desc>
+  <rect width="256" height="256" rx="56" fill="#09090B"/>
+  <path d="M68 70C68 61.1634 75.1634 54 84 54H122V106H68V70Z" fill="#7C3AED"/>
+  <path d="M134 54H172C180.837 54 188 61.1634 188 70V106H134V54Z" fill="#06B6D4"/>
+  <path d="M68 150H122V202H84C75.1634 202 68 194.837 68 186V150Z" fill="#06B6D4"/>
+  <path d="M134 150H188V186C188 194.837 180.837 202 172 202H134V150Z" fill="#7C3AED"/>
+  <path d="M130 72L102 128H127L113 184L154 112H128L130 72Z" fill="white"/>
+  <rect x="78" y="118" width="34" height="10" rx="5" fill="white" fill-opacity="0.72"/>
+  <rect x="144" y="118" width="34" height="10" rx="5" fill="white" fill-opacity="0.72"/>
+  <rect x="78" y="136" width="24" height="8" rx="4" fill="white" fill-opacity="0.42"/>
+  <rect x="154" y="136" width="24" height="8" rx="4" fill="white" fill-opacity="0.42"/>
+</svg>

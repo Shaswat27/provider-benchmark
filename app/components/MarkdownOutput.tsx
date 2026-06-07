@@ -46,7 +46,7 @@ const markdownComponents: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-zinc-900 underline underline-offset-2 hover:text-zinc-600 dark:text-zinc-200 dark:hover:text-zinc-400"
+      className="text-blue-600 underline underline-offset-2 hover:text-blue-700 dark:text-zinc-200 dark:hover:text-zinc-400"
     >
       {children}
     </a>
@@ -61,7 +61,7 @@ const markdownComponents: Components = {
     <hr className="my-3 border-zinc-200 dark:border-zinc-700" />
   ),
   pre: ({ children }) => (
-    <pre className="mb-2 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-100 p-3 text-xs last:mb-0 dark:border-zinc-700 dark:bg-zinc-900">
+    <pre className="mb-2 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-100/80 p-3 text-xs last:mb-0 dark:border-zinc-700 dark:bg-zinc-900">
       {children}
     </pre>
   ),
@@ -75,7 +75,7 @@ const markdownComponents: Components = {
       );
     }
     return (
-      <code className="rounded bg-zinc-200 px-1 py-0.5 font-mono text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+      <code className="rounded bg-zinc-200/80 px-1 py-0.5 font-mono text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
         {children}
       </code>
     );
@@ -107,7 +107,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
   if (!content) return null;
 
   return (
-    <div className="pr-14 text-sm text-zinc-700 dark:text-zinc-300">
+    <div className="text-sm text-zinc-700 dark:text-zinc-300">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {content}
       </ReactMarkdown>
