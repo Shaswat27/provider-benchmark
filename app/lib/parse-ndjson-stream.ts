@@ -1,3 +1,5 @@
+import type { MultiRunSummary } from "@/app/lib/benchmark-stats";
+
 export type ProviderPanelState = {
   output: string;
   ttftMs: number | null;
@@ -6,6 +8,7 @@ export type ProviderPanelState = {
   tokensPerSec: number | null;
   error: string | null;
   isStreaming: boolean;
+  multiRunSummary?: MultiRunSummary | null;
 };
 
 export function createEmptyPanelState(): ProviderPanelState {
@@ -17,6 +20,7 @@ export function createEmptyPanelState(): ProviderPanelState {
     tokensPerSec: null,
     error: null,
     isStreaming: false,
+    multiRunSummary: null,
   };
 }
 

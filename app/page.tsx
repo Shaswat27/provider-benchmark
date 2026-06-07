@@ -7,6 +7,12 @@ import {
   createEmptyPanelState,
   type ProviderPanelState,
 } from "@/app/lib/parse-ndjson-stream";
+import {
+  aggregateMedians,
+  sampleFromPanelState,
+  summarizeMultiRun,
+  type RunSample,
+} from "@/app/lib/benchmark-stats";
 import { BENCHMARK_MODELS, getModelById } from "@/app/lib/models";
 import { runProvider } from "@/app/lib/run-provider";
 import { useEffect, useRef, useState } from "react";
@@ -43,6 +49,7 @@ function ProviderPanel({ providerName, modelSlug, state }: ProviderPanelProps) {
             completionTokens={state.completionTokens}
             tokensPerSec={state.tokensPerSec}
             isStreaming={state.isStreaming}
+            multiRunSummary={state.multiRunSummary}
           />
         </div>
       </div>
@@ -72,13 +79,50 @@ function ProviderPanel({ providerName, modelSlug, state }: ProviderPanelProps) {
   );
 }
 
+const RUNS_PER_BENCHMARK_OPTIONS = [1, 3, 5] as const;
+type RunsPerBenchmark = (typeof RUNS_PER_BENCHMARK_OPTIONS)[number];
+
+function finalizeMultiRunPanel(
+  samples: RunSample[],
+  lastState: ProviderPanelState,
+  lastSuccessfulState: ProviderPanelState | null,
+  totalRuns: number,
+): ProviderPanelState {
+  const medians = aggregateMedians(samples);
+  const summary = summarizeMultiRun(samples, totalRuns);
+  const outputState = lastSuccessfulState ?? lastState;
+
+  if (!medians || !summary) {
+    return {
+      ...lastState,
+      isStreaming: false,
+      multiRunSummary: null,
+    };
+  }
+
+  return {
+    ...outputState,
+    ttftMs: medians.ttftMs,
+    totalMs: medians.totalMs,
+    tokensPerSec: medians.tokensPerSec,
+    completionTokens: medians.completionTokens,
+    error: null,
+    isStreaming: false,
+    multiRunSummary: summary,
+  };
+}
+
 export default function HomePage() {
   const [modelId, setModelId] = useState(BENCHMARK_MODELS[0].id);
+  const [runsPerBenchmark, setRunsPerBenchmark] = useState<RunsPerBenchmark>(1);
   const [userPrompt, setUserPrompt] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [fireworks, setFireworks] = useState(createEmptyPanelState);
   const [together, setTogether] = useState(createEmptyPanelState);
   const [isRunning, setIsRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState<{ current: number; total: number } | null>(
+    null,
+  );
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -126,33 +170,91 @@ export default function HomePage() {
     abortRef.current = controller;
 
     setIsRunning(true);
+    setRunProgress(runsPerBenchmark > 1 ? { current: 0, total: runsPerBenchmark } : null);
     setFireworks(createEmptyPanelState());
     setTogether(createEmptyPanelState());
 
-    const runStart = performance.now();
+    const fireworksSamples: RunSample[] = [];
+    const togetherSamples: RunSample[] = [];
+    let lastFireworks = createEmptyPanelState();
+    let lastTogether = createEmptyPanelState();
+    let lastSuccessfulFireworks: ProviderPanelState | null = null;
+    let lastSuccessfulTogether: ProviderPanelState | null = null;
 
     try {
-      await Promise.all([
-        runProvider(
-          "/api/fireworks",
-          model.fireworksModel,
-          messages,
-          runStart,
-          (update) => setFireworks((prev) => ({ ...prev, ...update })),
-          controller.signal,
+      for (let runIndex = 0; runIndex < runsPerBenchmark; runIndex += 1) {
+        if (controller.signal.aborted) break;
+
+        if (runsPerBenchmark > 1) {
+          setRunProgress({ current: runIndex + 1, total: runsPerBenchmark });
+        }
+
+        setFireworks(createEmptyPanelState());
+        setTogether(createEmptyPanelState());
+
+        const runStart = performance.now();
+
+        const [fireworksResult, togetherResult] = await Promise.all([
+          runProvider(
+            "/api/fireworks",
+            model.fireworksModel,
+            messages,
+            runStart,
+            (update) => setFireworks((prev) => ({ ...prev, ...update })),
+            controller.signal,
+          ),
+          runProvider(
+            "/api/together",
+            model.togetherModel,
+            messages,
+            runStart,
+            (update) => setTogether((prev) => ({ ...prev, ...update })),
+            controller.signal,
+          ),
+        ]);
+
+        lastFireworks = fireworksResult;
+        lastTogether = togetherResult;
+
+        const fireworksSample = sampleFromPanelState(fireworksResult);
+        const togetherSample = sampleFromPanelState(togetherResult);
+
+        if (fireworksSample) {
+          fireworksSamples.push(fireworksSample);
+          lastSuccessfulFireworks = fireworksResult;
+        }
+        if (togetherSample) {
+          togetherSamples.push(togetherSample);
+          lastSuccessfulTogether = togetherResult;
+        }
+
+        if (runsPerBenchmark === 1) {
+          return;
+        }
+      }
+
+      if (controller.signal.aborted) return;
+
+      setFireworks(
+        finalizeMultiRunPanel(
+          fireworksSamples,
+          lastFireworks,
+          lastSuccessfulFireworks,
+          runsPerBenchmark,
         ),
-        runProvider(
-          "/api/together",
-          model.togetherModel,
-          messages,
-          runStart,
-          (update) => setTogether((prev) => ({ ...prev, ...update })),
-          controller.signal,
+      );
+      setTogether(
+        finalizeMultiRunPanel(
+          togetherSamples,
+          lastTogether,
+          lastSuccessfulTogether,
+          runsPerBenchmark,
         ),
-      ]);
+      );
     } finally {
       if (!controller.signal.aborted) {
         setIsRunning(false);
+        setRunProgress(null);
       }
     }
   }
@@ -192,6 +294,32 @@ export default function HomePage() {
               {selectedModel.notes}
             </p>
           ) : null}
+        </section>
+
+        <section className="space-y-2">
+          <label htmlFor="runs-select" className="text-sm font-medium">
+            Runs per benchmark
+          </label>
+          <select
+            id="runs-select"
+            value={runsPerBenchmark}
+            onChange={(e) =>
+              setRunsPerBenchmark(Number(e.target.value) as RunsPerBenchmark)
+            }
+            disabled={isRunning}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-sm outline-none ring-zinc-300 focus:border-zinc-400 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:ring-zinc-600 dark:focus:border-zinc-500"
+          >
+            {RUNS_PER_BENCHMARK_OPTIONS.map((runs) => (
+              <option key={runs} value={runs}>
+                {runs} {runs === 1 ? "(default)" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            {runsPerBenchmark === 1
+              ? "Single parallel pair — same as before."
+              : `${runsPerBenchmark} sequential parallel pairs. Medians exclude failed runs; min–max shown when 2+ runs succeed.`}
+          </p>
         </section>
 
         <section className="space-y-3">
@@ -252,7 +380,11 @@ export default function HomePage() {
             onClick={() => void runBenchmark()}
             className="rounded-xl bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
           >
-            {isRunning ? "Running…" : "Run benchmark"}
+            {isRunning
+              ? runProgress
+                ? `Running… (${runProgress.current}/${runProgress.total})`
+                : "Running…"
+              : "Run benchmark"}
           </button>
           <button
             type="button"

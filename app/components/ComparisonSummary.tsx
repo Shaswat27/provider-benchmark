@@ -96,11 +96,19 @@ export function ComparisonSummary({
     );
   }
 
+  const usesMedians =
+    fireworks.multiRunSummary != null || together.multiRunSummary != null;
+
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
         Comparison
       </h3>
+      {usesMedians ? (
+        <p className="mb-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+          Based on median metrics per provider (failed runs excluded).
+        </p>
+      ) : null}
       <ul className="space-y-1.5 tabular-nums">
         {lines.map((line) => (
           <li key={line}>{line}</li>
