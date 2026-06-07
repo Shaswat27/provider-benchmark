@@ -82,12 +82,9 @@ export async function POST(req: NextRequest) {
       baseURL: "https://api.fireworks.ai/inference/v1",
     });
 
-    const stream = await client.chat.completions.create(
-      options,
-      sessionKey
-        ? { headers: { "x-session-affinity": sessionKey } }
-        : undefined,
-    );
+    const stream = await client.chat.completions.create(options, {
+      headers: { "x-session-affinity": sessionKey },
+    });
 
     const usage = {
       promptTokens: undefined as number | undefined,

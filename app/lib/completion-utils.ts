@@ -21,23 +21,24 @@ export function shouldDisableThinking(model: string): boolean {
   return normalized.includes("kimi") || normalized.includes("deepseek-v4");
 }
 
-/** Sticky routing key for prompt-cache hits when the system prompt is stable. */
+/** Sticky routing key for prompt-cache hits across repeated requests with the same prefix. */
 export function getSessionAffinityKey(
   model: string,
   messages: ChatCompletionMessageParam[],
-): string | undefined {
-  const systemMessage = messages.find((m) => m.role === "system");
-  const systemContent =
-    typeof systemMessage?.content === "string" ? systemMessage.content.trim() : "";
+): string {
+  const prefix = messages
+    .map((m) => {
+      const content = typeof m.content === "string" ? m.content : "";
+      return `${m.role}:${content}`;
+    })
+    .join("\n");
 
-  if (!systemContent) return undefined;
-
-  const systemHash = createHash("sha256")
-    .update(systemContent)
+  const prefixHash = createHash("sha256")
+    .update(prefix)
     .digest("hex")
     .slice(0, 16);
 
-  return `${model}:${systemHash}`;
+  return `${model}:${prefixHash}`;
 }
 
 export function buildChatOptions(
